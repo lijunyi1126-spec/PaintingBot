@@ -21,12 +21,12 @@ const int X_MIN_PIN = 3;
 const int Y_MIN_PIN = 14;
 const int Z_MIN_PIN = 18;
 
-int x_brush_1 = 0.5*50; int x_brush_2 = 17.5*50;
-int y_brush_1=7*50; int y_brush_2=13.5*50; int y_brush_3=20*50;
-long pos_color_00[2] = {21.5*50,3*50}; long pos_color_01[2] = {24*50,3*50}; //{x,y}
-long pos_color_10[2] = {21.5*50,19*50}; long pos_color_11[2] = {24*50,19*50};
-long pos_moboo_1[2] = {28*50,3*50}; long pos_moboo_2[2] = {28*50,19*50};
-long pos_groove[2] = {40*50,11*50};
+int x_brush_1 = 0*50; int x_brush_2 = 17*50;
+int y_brush_1=4.5*50; int y_brush_2=13.5*50; int y_brush_3=22.5*50;
+long pos_color_00[2] = {20.1*50,3.5*50}; long pos_color_01[2] = {24.8*50,3.5*50}; //{x,y}
+long pos_color_10[2] = {20.1*50,19.5*50}; long pos_color_11[2] = {24.8*50,19.5*50};
+long pos_moboo_1[2] = {29*50,6*50}; long pos_moboo_2[2] = {29*50,19*50};
+long pos_groove_2[2] = {40*50,3.5*50}; long pos_groove_1[2] = {40*50,19.5*50};
 
 int z_floor=950; int z_color=850; int z_groove=1100; int z_mid=0;
 
@@ -82,9 +82,9 @@ void loop() {
     String cmd = Serial2.readStringUntil('\n');
     cmd.trim();
 
-    if (cmd.startsWith("COLOR1:"))  selectedColor1  = getColorPos(cmd.substring(7));
-    if (cmd.startsWith("COLOR2A:")) selectedColor2a = getColorPos(cmd.substring(8));
-    if (cmd.startsWith("COLOR2B:")) selectedColor2b = getColorPos(cmd.substring(8));
+    if (cmd.startsWith("COLOR1:"))  selectedColor1 = getColorPos(cmd.substring(7));
+    if (cmd.startsWith("COLOR2:")) selectedColor2a = getColorPos(cmd.substring(7));
+    if (cmd.startsWith("COLOR3:")) selectedColor2b = getColorPos(cmd.substring(7));
 
     if (cmd == "START" && waitingToStart && !emergencyStop) {
       digitalWrite(X_ENABLE_PIN, LOW);
@@ -127,6 +127,8 @@ void runPaint() {
   Color(selectedColor1);
   if (emergencyStop) return;
 
+  //moboo4();
+
   reportStep(2, "第一次繪製");
   Draw();
   if (emergencyStop) return;
@@ -136,32 +138,46 @@ void runPaint() {
   if (emergencyStop) return;
 
   reportStep(3, "清洗筆刷");
-  groove();
+  groove(pos_groove_1);
   if (emergencyStop) return;
 
   reportStep(4, "吸去殘餘水分");
   moboo();
   if (emergencyStop) return;
-  // moboo();
-  // if (emergencyStop) return;
+  moboo();
+  if (emergencyStop) return;
+
+  
 
   reportStep(5, "第二次沾顏料");
   Color(selectedColor2a);  // Color() 保持原樣，呼叫兩次
-  Color(selectedColor2b);
+  
+  if (emergencyStop) return;
+
+  Wet(pos_groove_2);
+  if (emergencyStop) return;
+  moboo2();
   if (emergencyStop) return;
 
   reportStep(6, "第二次繪製");
-  Draw();
-  if (emergencyStop) return;
+  Draw2();
+  groove(pos_groove_2);
+  moboo();
+  moboo();
 
-  Color(selectedColor2a);  // Color() 保持原樣，呼叫兩次
+  reportStep(7, "第三次繪製");
   Color(selectedColor2b);
+  Wet(pos_groove_2);
+  moboo3();
+  Draw3();
   if (emergencyStop) return;
-  Draw();
-  if (emergencyStop) return;
+  
+  // Color(selectedColor2b);
+  // //Color(selectedColor2a);
+  // if (emergencyStop) return;
+  // DrawCounter();
 
-
-  reportStep(6, "完成！");
+  reportStep(8, "完成！");
   waitingToStart = true;
 }
 
@@ -202,7 +218,6 @@ void homeAxis(AccelStepper &stepper, int homingPin, int direction) {
   // stepper.setCurrentPosition(0); // 將此處定義為絕對座標 0
   // delay(200);
 }
-
 void Color(long* color) {
   moveXY(color);
   moveSafe(color[0], color[1], z_color);
@@ -218,123 +233,260 @@ void Color(long* color) {
   moveSafe(color[0]+k,color[1],z_color-k*3);
   delay(100);
 
-  moveSafe(color[0], color[1], 400);
 
-  moveSafe(color[0], color[1], z_color+25);
-  moveXY(color[0], color[1]-k);
-  delay(100);
-  moveXY(color[0], color[1]+k);
-  delay(100);
-  moveXY(color[0], color[1]-k);
-  delay(100);
-  moveXY(color[0], color[1]+k);
-  delay(100);
+  moveSafe(color[0], color[1], z_mid);
 
-  moveSafe(color[0], color[1], 0);
+//左右
+  // int b = 300;
+  // moveSafe(color[0],color[1],z_color);
+  // moveSafe(color[0], color[1]+b, z_color+100);
+  // delay(100);
+  // moveSafe(color[0], color[1]-b, z_color+100);
+  // delay(100);
+  // moveSafe(color[0], color[1]+b, z_color+100);
+  // delay(100);
+  // moveSafe(color[0], color[1]-b, z_color+100);
+  // delay(100);
+  // moveSafe(color[0], color[1], z_mid);
 }
-
-void Color2(long* color) {
+void Color1_2(long* color) {
   moveXY(color);
   moveSafe(color[0], color[1], z_color);
+  int k=100; int a = 50;
+  moveSafe(color[0]+k+a,color[1],z_color-k*3);
+  delay(100);
+  moveSafe(color[0]+a, color[1], z_color);
+  delay(100);
+  moveSafe(color[0]-k+a, color[1], z_color-k*3);
+  delay(100);
+  moveSafe(color[0]+a, color[1], z_color);
+  delay(100);
+  moveSafe(color[0]+k+a,color[1],z_color-k*3);
+  delay(100);
+
+  // int b = 200;
+  // moveSafe(color[0]+a,color[1],z_color);
+  // moveSafe(color[0]+a, color[1]+b, z_color+100);
+  // delay(100);
+  // moveSafe(color[0]+a, color[1]-b, z_color+100);
+  // delay(100);
+  // moveSafe(color[0]+a, color[1]+b, z_color+100);
+  // delay(100);
+  // moveSafe(color[0]+a, color[1]-b, z_color+100);
+  // delay(100);
+  // moveSafe(color[0]+a, color[1], z_mid);
+
   moveSafe(color[0], color[1], z_mid);
 }
 
+void Color2(long* color) {
+  int k=70;
+  moveSafe(color[0]+k, color[1], 0);
+  moveSafe(color[0]+k, color[1], z_color);
+  moveSafe(color[0]+k, color[1], z_mid);
+}
+
 void Draw() {
-  // moveXY(x_brush_1, y_brush_1);
-
-  // isBrushing = true;
-  // moveZ(z_floor);
-  // moveXY(x_brush_2, y_brush_1);
-  // moveZ(z_mid);
-  // moveXY(x_brush_2, y_brush_2);
-  // moveZ(z_floor);
-  // moveXY(x_brush_1, y_brush_2);
-  // moveZ(z_mid);
-  // moveXY(x_brush_1, y_brush_3);
-  // moveZ(z_floor);
-  // moveXY(x_brush_2, y_brush_3);
-  // moveZ(z_mid);
-
-  // int k = 150;
-  // moveXY(x_brush_1, y_brush_1);
-  // moveSafe(x_brush_1, y_brush_1,z_floor-k);
-  
-  // moveSafe(x_brush_2+50, y_brush_1,z_floor);
-  
-  // moveXY(x_brush_1-100, y_brush_2);
-  // moveSafe(x_brush_1-100, y_brush_2, z_floor-k);
-  // moveSafe(x_brush_2, y_brush_2, z_floor);
-  // moveSafe(x_brush_2, y_brush_2, z_mid);
-
-  // moveXY(x_brush_1, y_brush_3);
-  // moveSafe(x_brush_1, y_brush_3, z_floor);
-  // moveXY(x_brush_2, y_brush_3);
-  // moveSafe(x_brush_2, y_brush_3, z_mid);
-  int k = 150;
+  int k = 100;
   moveXY(x_brush_1, y_brush_1);
-  moveSafe(x_brush_1, y_brush_1,z_floor-k);
-  moveSafe(x_brush_2+100, y_brush_1,z_floor);
-  moveSafe(x_brush_2+100, y_brush_1,z_mid);
-  moveSafe(x_brush_2+100, y_brush_2,z_mid);
-  moveSafe(x_brush_2+100, y_brush_2,z_floor-k);
-  moveSafe(x_brush_1-50, y_brush_2, z_floor);
-  moveSafe(x_brush_1-50, y_brush_2, z_mid);
+  moveSafe(x_brush_1, y_brush_1,z_floor-k-60);
+  moveSafe(x_brush_2+50, y_brush_1,z_floor-80);
+  moveSafe(x_brush_2+50, y_brush_1,z_mid);
+  moveSafe(x_brush_1, y_brush_2,z_mid);
+  moveSafe(x_brush_1, y_brush_2,z_floor-k-60+40-10);
+  moveSafe(x_brush_2+50, y_brush_2, z_floor-40+40-10);
+  moveSafe(x_brush_2+50, y_brush_2, z_mid);
   moveSafe(x_brush_1, y_brush_3,z_mid);
-  moveSafe(x_brush_1, y_brush_3,z_floor-k);
-  moveSafe(x_brush_2, y_brush_3,z_floor);
-  moveSafe(x_brush_2, y_brush_3, 0);
+  moveSafe(x_brush_1, y_brush_3,z_floor-k-60+60+20-20);
+  moveSafe(x_brush_2+50, y_brush_3,z_floor-40+60+20-20);
+  moveSafe(x_brush_2+50, y_brush_3, 0);
 }
 
 void DrawCounter() {
-  int k = 150;
-  moveXY(x_brush_1, y_brush_3);
-  moveSafe(x_brush_1, y_brush_3,z_floor-k);
-  moveSafe(x_brush_2+100, y_brush_3,z_floor);
-  moveSafe(x_brush_2+100, y_brush_3,z_mid);
+  int k = 100;
+  moveXY(x_brush_2, y_brush_3);
+  moveSafe(x_brush_2, y_brush_3,z_floor-k-60+60);
+  moveSafe(x_brush_1, y_brush_3,z_floor-40+60);
+  moveSafe(x_brush_1, y_brush_3,z_mid);
+  moveSafe(x_brush_2, y_brush_2,z_mid);
+  moveSafe(x_brush_2, y_brush_2,z_floor-k-60+40-20);
+  moveSafe(x_brush_1, y_brush_2, z_floor-40-20);
+  moveSafe(x_brush_1, y_brush_2, z_mid);
+  moveSafe(x_brush_2, y_brush_1,z_mid);
+  moveSafe(x_brush_2, y_brush_1,z_floor-k-60+40-20);
+  moveSafe(x_brush_1, y_brush_1,z_floor-40+40-20);
+  moveSafe(x_brush_1, y_brush_1, 0);
+
+  // moveSafe(x_brush_2, y_brush_3,z_floor-k-60);
+  // moveSafe(x_brush_1, y_brush_3,z_floor-80+40);
+  // moveSafe(x_brush_1, y_brush_3,z_mid);
+  // moveSafe(x_brush_2-50, y_brush_2,z_mid);
+  // moveSafe(x_brush_2-50, y_brush_2,z_floor-k-60+40);
+  // moveSafe(x_brush_1, y_brush_3, z_floor-40+40);
+  // moveSafe(x_brush_1, y_brush_3, z_mid);
+  // moveSafe(x_brush_2-50, y_brush_1,z_mid);
+  // moveSafe(x_brush_2-50, y_brush_1,z_floor-k-60+60);
+  // moveSafe(x_brush_1, y_brush_2,z_floor-40+60);
+  // moveSafe(x_brush_1, y_brush_2, 0);
+}
+void Draw2() {
+  int k = 100; int a = 25; int b = 50;
+  moveXY(x_brush_1, y_brush_1+a);
+  moveSafe(x_brush_1, y_brush_1+a,z_floor-k-60+40+20+60-20-20-20);
+  moveSafe(x_brush_2+50, y_brush_1+a+b,z_floor-80+40+40+20+60-20-20-20);
+  moveSafe(x_brush_2+50, y_brush_1+a+b,z_mid);
+  moveSafe(x_brush_1, y_brush_2,z_mid);
+  moveSafe(x_brush_1, y_brush_2,z_floor-k-60+40+40+20+60-20-20-20);
+  moveSafe(x_brush_2+50, y_brush_2+b, z_floor-40+40+40+60+20-20-20-20);
+  moveSafe(x_brush_2+50, y_brush_2+b, z_mid);
+  moveSafe(x_brush_1, y_brush_3-a,z_mid);
+  moveSafe(x_brush_1, y_brush_3-a,z_floor-k-60+40+40+20+60-20-20-20);
+  moveSafe(x_brush_2+50, y_brush_3-a+b,z_floor-40+40+40+20+60-20-20-20);
+  moveSafe(x_brush_2+50, y_brush_3-a+b, 0);
+}
+
+void Draw3() {
+  int k = 100; int a = 25; int b = 20; int c = 50;
+  moveXY(x_brush_1, y_brush_3+a+b);
+  moveSafe(x_brush_1, y_brush_3+a+b,z_floor-k-60+40+80-40-20);
+  moveSafe(x_brush_2+50, y_brush_3+a+b-c,z_floor-80+40+40+80-40-20);
+  moveSafe(x_brush_2+50, y_brush_3+a+b-c,z_mid);
+  moveSafe(x_brush_1, y_brush_2,z_mid);
+  moveSafe(x_brush_1, y_brush_2,z_floor-k-60+40+40+80-40-20);
+  moveSafe(x_brush_2+50, y_brush_2-c, z_floor-40+40+40+80-40-20);
+  moveSafe(x_brush_2+50, y_brush_2-c, z_mid);
+  moveSafe(x_brush_1, y_brush_1-a-b,z_mid);
+  moveSafe(x_brush_1, y_brush_1-a-b,z_floor-k-60+40+40+80-40-20);
+  moveSafe(x_brush_2+50, y_brush_1-a-b-c,z_floor-40+40+40+80-40-20);
+  moveSafe(x_brush_2+50, y_brush_1-a-b-c, 0);
+}
+
+void Draw2_1() {
+  moveXY(x_brush_1+50, y_brush_1);
+  moveSafe(x_brush_1+50, y_brush_1,z_floor-140);
+  moveSafe(x_brush_2+100, y_brush_1,z_floor+80);
+  moveSafe(x_brush_2+100, y_brush_1,z_mid);
+  moveSafe(x_brush_1+50, y_brush_2,z_mid);
+  moveSafe(x_brush_1+50, y_brush_2,z_floor-50);
+  moveSafe(x_brush_2+100, y_brush_2, z_floor+80);
+  moveSafe(x_brush_2+100, y_brush_2, z_mid);
+}
+
+void Draw2_2() {
+
+  moveXY(x_brush_1+50, y_brush_2);
+  moveSafe(x_brush_1+50, y_brush_2,z_floor-140);
+  moveSafe(x_brush_2+100, y_brush_2,z_floor+80);
   moveSafe(x_brush_2+100, y_brush_2,z_mid);
-  moveSafe(x_brush_2+100, y_brush_2,z_floor-k);
-  moveSafe(x_brush_1-50, y_brush_2, z_floor);
-  moveSafe(x_brush_1-50, y_brush_2, z_mid);
-  moveSafe(x_brush_1, y_brush_1,z_mid);
-  moveSafe(x_brush_1, y_brush_1,z_floor-k);
-  moveSafe(x_brush_2, y_brush_1,z_floor);
-  moveSafe(x_brush_2, y_brush_1, 0);
+  moveSafe(x_brush_1+50, y_brush_3,z_mid);
+  moveSafe(x_brush_1+50, y_brush_3,z_floor-50);
+  moveSafe(x_brush_2+100, y_brush_3, z_floor+80);
+  moveSafe(x_brush_2+100, y_brush_3, z_mid);
+}
+void Draw2_3() {
+
+  moveXY(x_brush_1+50, y_brush_3);
+  moveSafe(x_brush_1+50, y_brush_3,z_floor-140);
+  moveSafe(x_brush_2+100, y_brush_3,z_floor+80);
+  moveSafe(x_brush_2+100, y_brush_3,z_mid);
+  moveSafe(x_brush_1+50, y_brush_3,z_mid);
+  moveSafe(x_brush_1+50, y_brush_3,z_floor-50);
+  moveSafe(x_brush_2+100, y_brush_3, z_floor+80);
+  moveSafe(x_brush_2+100, y_brush_3, z_mid);
 }
 
 void moboo() {
   moveXY(pos_moboo_1);
   moveSafe(pos_moboo_1[0], pos_moboo_1[1], z_floor);
-  int k=150;
+  int k=150; int a = 100;
   
   moveSafe(pos_moboo_1[0],pos_moboo_1[1],z_floor-k);
   moveSafe(pos_moboo_1[0],pos_moboo_1[1],z_floor);
+  moveSafe(pos_moboo_1[0],pos_moboo_1[1],z_mid);
   moveSafe(pos_moboo_2[0],pos_moboo_2[1],z_mid);
   moveSafe(pos_moboo_2[0],pos_moboo_2[1],z_floor);
   moveSafe(pos_moboo_2[0],pos_moboo_2[1],z_floor-k);
   moveSafe(pos_moboo_2[0], pos_moboo_2[1], z_floor);
   moveSafe(pos_moboo_2[0], pos_moboo_2[1], z_mid);
-  
+
+  // moveSafe(pos_moboo_1[0]+k,pos_moboo_1[1], z_mid);
+  // moveSafe(pos_moboo_1[0]+k,pos_moboo_1[1], z_floor-k);
+  // moveSafe(pos_moboo_1[0]-k,pos_moboo_1[1],z_floor);
+  // moveSafe(pos_moboo_1[0]-k,pos_moboo_1[1],z_floor-k);
+  // moveSafe(pos_moboo_1[0]-k,pos_moboo_1[1],z_floor+a);
+
+
+  // moveSafe(pos_moboo_2[0]+k,pos_moboo_2[1],z_mid);
+  // moveSafe(pos_moboo_2[0]+k,pos_moboo_2[1],z_floor-k);
+  // moveSafe(pos_moboo_2[0]-k,pos_moboo_2[1],z_floor);
+  // moveSafe(pos_moboo_2[0]-k,pos_moboo_2[1],z_floor-k);
+  // moveSafe(pos_moboo_2[0]-k, pos_moboo_2[1], z_floor+a);
+
+
+  //moveSafe(pos_moboo_2[0]-k, pos_moboo_2[1], z_mid);
 }
 
-void groove() {
-  moveXY(pos_groove);
-  moveSafe(pos_groove[0], pos_groove[1], z_groove);
+void moboo2() {
+  moveXY(pos_moboo_1);
+  moveSafe(pos_moboo_1[0], pos_moboo_1[1], z_floor);
+  int k=150; int a = 100;
+  moveSafe(pos_moboo_1[0],pos_moboo_1[1],z_floor-k);
+  moveSafe(pos_moboo_1[0], pos_moboo_1[1], z_floor);
+  moveSafe(pos_moboo_1[0],pos_moboo_1[1],z_mid);
+  // moveSafe(pos_moboo_2[0],pos_moboo_2[1],z_mid);
+  // moveSafe(pos_moboo_2[0],pos_moboo_2[1],z_floor);
+  // moveSafe(pos_moboo_2[0],pos_moboo_2[1],z_mid);
+
+  // moveSafe(pos_moboo_2[0],pos_moboo_2[1],z_mid);
+  // moveSafe(pos_moboo_2[0],pos_moboo_2[1],z_floor);
+  // moveSafe(pos_moboo_2[0],pos_moboo_2[1],z_floor-k);
+  // moveSafe(pos_moboo_2[0], pos_moboo_2[1], z_floor);
+  // moveSafe(pos_moboo_2[0], pos_moboo_2[1], z_mid);
+}
+void moboo3() {
+  moveXY(pos_moboo_2);
+  moveSafe(pos_moboo_2[0], pos_moboo_2[1], z_floor);
+  int k=150; int a = 100;
+  moveSafe(pos_moboo_2[0],pos_moboo_2[1],z_floor-k);
+  moveSafe(pos_moboo_2[0], pos_moboo_2[1], z_floor);
+  moveSafe(pos_moboo_2[0],pos_moboo_2[1],z_mid);
+}
+void moboo4() {
+  moveXY(pos_moboo_2);
+  moveSafe(pos_moboo_2[0], pos_moboo_2[1], z_floor);
+  moveSafe(pos_moboo_2[0],pos_moboo_2[1],z_mid);
+}
+
+void groove(long* pos_groove_1) {
+  moveXY(pos_groove_1);
+  moveSafe(pos_groove_1[0], pos_groove_1[1], z_groove);
   int k=300;
 
-  moveXY(pos_groove[0]+k,pos_groove[1]);
-  moveXY(pos_groove[0]-k, pos_groove[1]);
-  delay(100);
-  moveXY(pos_groove[0]+k, pos_groove[1]);
-  moveXY(pos_groove[0]-k, pos_groove[1]);
-  delay(100);
-  moveXY(pos_groove[0]+k, pos_groove[1]);
-  moveXY(pos_groove[0]-k, pos_groove[1]);
-  delay(100);
+  moveXY(pos_groove_1[0]+k,pos_groove_1[1]);
+  delay(200);
+  moveXY(pos_groove_1[0]-k, pos_groove_1[1]);
+  delay(200);
+  moveXY(pos_groove_1[0]+k, pos_groove_1[1]);
+  delay(200);
+  moveXY(pos_groove_1[0]-k, pos_groove_1[1]);
+  delay(200);
+  moveXY(pos_groove_1[0]+k, pos_groove_1[1]);
+  delay(200);
+  moveXY(pos_groove_1[0]-k, pos_groove_1[1]);
+  delay(200);
+  moveXY(pos_groove_1[0]+k, pos_groove_1[1]);
+  delay(200);
+  moveXY(pos_groove_1[0]-k, pos_groove_1[1]);
 
-  moveSafe(pos_groove[0]-k, pos_groove[1], z_mid);
+  moveSafe(pos_groove_1[0]-k, pos_groove_1[1], z_mid);
 }
 
-
+void Wet(long* pos_groove) {
+  moveXY(pos_groove);
+  moveSafe(pos_groove[0], pos_groove[1], z_floor-20);
+  
+  moveSafe(pos_groove[0], pos_groove[1], z_mid);
+}
 
 void test1(AccelStepper& stepper) {
   stepper.setMaxSpeed(1000);
